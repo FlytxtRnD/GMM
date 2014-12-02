@@ -10,7 +10,7 @@ class GMMclustering:
     logging.basicConfig(level=logging.INFO,
                         format='%(levelname)s %(message)s')
 
-    def fit(self, X, k, n_iter):
+    def fit(self, X, k, n_iter, convergence_threshold):
         """
         Estimate model parameters with the expectation-maximization
         algorithm.
@@ -47,7 +47,6 @@ class GMMclustering:
         """
         sc = X.context
         covariance_type = 'diag'
-        convergence_threshold = 1e-3
         converged = False
         self.min_covar = 1e-3
 

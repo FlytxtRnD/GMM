@@ -12,27 +12,49 @@ How to Run
 
 There are two ways to run this code.
 
-1.Run the file PyGMM using spark-submit with the arguments:
+1. Using this library in your Python program
 
-          PyGMM <master> <input_file> <num_of_clusters>[<num_of_iterations>]
-          
-  where master is the spark master URL and input file should be comma separated numeric values.
-  The main function will convert the dataset into an RDD and invoke the trainGMM method of class GMMModel.
-  
-2.Train the GMM model using a dataset:
+    You can train the GMM model by invoking the function GMMModel.trainGMM(data,k,n_iter,ct) 
+    where data is an RDD(of Dense or Sparse Vector) ,
+          k is the number of components/clusters, 
+          n_iter is the number of  iterations(by default 100), 
+          ct is the convergence threshold(by default 1e-3).
 
-          model = GMMModel.trainGMM(data,k,n_iter)
-          
-  where data is an RDD(of Dense or Sparse Vector) ,k is the number of components/clusters, n_iter is the number of   iterations(by default 100)
+    To use this library in your program simply download the GMMModel.py and GMMClustering.py
+    and add them as Python files along with your own user code as shown below:
   
-  The returned object "model" has the following attributes:
+    wget https://raw.githubusercontent.com/FlytxtRnD/GMM/master/GMMModel.py
+    wget https://raw.githubusercontent.com/FlytxtRnD/GMM/master/GMMClustering.py
+
+   ./bin/spark-submit --master <master> 
+                      --py-files GMMModel.py,GMMclustering.py
+                      <your-program.py> <input_file> <num_of_clusters> 
+                      [--n_iter <num_of_iterations>] [--ct <convergence_threshold>]
+
+    The returned object "model" has the following attributes:
             model.Means
             model.Covars
             model.Weights
   
+  To get the cluster labels and responsbility matrix (membership values),invoke the resultPredict()
   
-  To get the cluster labels and responsbility matrix (membership values):
+        responsibility_matrix,cluster_labels = GMMModel.resultPredict(model, data)
+
+2. Running the example GMM clustering script 
+
+    If you'd like to run our example program directly, also download the PyGMM.py file 
+    and invoke it with spark-submit.
+
+    wget https://raw.githubusercontent.com/FlytxtRnD/GMM/master/PyGMM.py
+
+    ./bin/spark-submit --master <master> 
+    --py-files GMMModel.py,GMMclustering.py
+    PyGMM.py <input_file> <num_of_clusters>
+    [--n_iter <num_of_iterations>] [--ct <convergence_threshold>]
+
+  where master is the spark master URL and input file should be comma separated numeric values.
+  Make sure you enter the full path to the downloaded files.
+ 
   
-          responsibility_matrix,cluster_labels = GMMModel.resultPredict(model, data)
 
   

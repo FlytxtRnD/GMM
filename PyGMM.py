@@ -1,12 +1,14 @@
+
 """
 Gaussian Mixture Model
 This implementation of GMM in pyspark uses the  Expectation-Maximization algorithm
 to estimate the parameters.
 """
 import sys
+import argparse
 import numpy as np
 from GMMModel import GMMModel
-from pyspark import SparkContext
+from pyspark import SparkContext, SparkConf
 
 
 def parseVector(line):
@@ -21,28 +23,22 @@ if __name__ == "__main__":
     num_of_clusters : Number of mixture components
     num_of_iterations : Number of EM iterations to perform. Default to 100
     """
-    if len(sys.argv) < 4:
-        print >> sys.stderr, (
-            "Invalid number of arguments ::  Usage: "
-            "PyGMM <master> <input_file> <num_of_clusters>[<num_of_iterations>]")
-        exit(-1)
-    if not(sys.argv[1].startswith('spark')):
-        print >> sys.stderr, \
-            "Enter spark master URL starting with spark://"
-        exit(-1)
 
-    sc = SparkContext(sys.argv[1], appName="GMM",
-                      pyFiles=['GMMclustering.py', 'GMMModel.py'])
+    conf = SparkConf().setAppName("GMM")
+    sc = SparkContext(conf=conf)
 
-    input_file = sys.argv[2]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input_file', help='input file')
+    parser.add_argument('k', type=int, help='num_of_clusters')
+    parser.add_argument('--n_iter', default=100, type=int, help='num_of_iterations')
+    parser.add_argument('--ct', type=float, default=1e-3, help='convergence_threshold')
+    args = parser.parse_args()
+
+    input_file = args.input_file
     lines = sc.textFile(input_file)
     data = lines.map(parseVector).cache()
-    k = int(sys.argv[3])
-    if(len(sys.argv) == 5):
-        n_iter = int(sys.argv[4])
-    else:
-        n_iter = 100
-    model = GMMModel.trainGMM(data, k, n_iter)
+
+    model = GMMModel.trainGMM(data, args.k, args.n_iter, args.ct)
     responsibility_matrix, cluster_labels = GMMModel.resultPredict(model, data)
 
     # Writing the GMM components to files
