@@ -36,10 +36,11 @@ if __name__ == "__main__":
     """
     Parameters
     ----------
-    master : spark master URL
     input_file : path of the file which contains the comma separated integer data points
-    num_of_clusters : Number of mixture components
-    num_of_iterations : Number of EM iterations to perform. Default to 100
+    k : Number of mixture components
+    n_iter : Number of EM iterations to perform. Default to 100
+    ct : convergence_threshold.Default to 1e-3
+    
     """
 
     conf = SparkConf().setAppName("GMM")
