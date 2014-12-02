@@ -41,7 +41,6 @@ if __name__ == "__main__":
     n_iter : Number of EM iterations to perform. Default to 100
     ct : convergence_threshold.Default to 1e-3
     """
-
     conf = SparkConf().setAppName("GMM")
     sc = SparkContext(conf=conf)
 
