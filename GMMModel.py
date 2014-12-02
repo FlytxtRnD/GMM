@@ -61,11 +61,11 @@ class GMMModel(object):
     """
 
     @classmethod
-    def trainGMM(cls, data, k, n_iter=100, ct=1e-3):
+    def trainGMM(cls, data, n_components, n_iter=100, ct=1e-3):
         """
         Train a GMM clustering model.
         """
-        gmmObj = GMMclustering().fit(data, k, n_iter, ct)
+        gmmObj = GMMclustering().fit(data, n_components, n_iter, ct)
         return gmmObj
 
     @classmethod

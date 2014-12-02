@@ -36,10 +36,10 @@ if __name__ == "__main__":
     """
     Parameters
     ----------
-    master : spark master URL
     input_file : path of the file which contains the comma separated integer data points
-    num_of_clusters : Number of mixture components
-    num_of_iterations : Number of EM iterations to perform. Default to 100
+    n_components : Number of mixture components
+    n_iter : Number of EM iterations to perform. Default to 100
+    ct : convergence_threshold.Default to 1e-3
     """
 
     conf = SparkConf().setAppName("GMM")
@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('input_file', help='input file')
-    parser.add_argument('k', type=int, help='num_of_clusters')
+    parser.add_argument('n_components', type=int, help='num_of_clusters')
     parser.add_argument('--n_iter', default=100, type=int, help='num_of_iterations')
     parser.add_argument('--ct', type=float, default=1e-3, help='convergence_threshold')
     args = parser.parse_args()
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     lines = sc.textFile(input_file)
     data = lines.map(parseVector).cache()
 
-    model = GMMModel.trainGMM(data, args.k, args.n_iter, args.ct)
+    model = GMMModel.trainGMM(data, args.n_components, args.n_iter, args.ct)
     responsibility_matrix, cluster_labels = GMMModel.resultPredict(model, data)
 
     # Writing the GMM components to files

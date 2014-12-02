@@ -29,15 +29,15 @@ class GMMclustering:
     logging.basicConfig(level=logging.INFO,
                         format='%(levelname)s %(message)s')
 
-    def fit(self, X, k, n_iter, convergence_threshold):
+    def fit(self, data, n_components, n_iter, ct):
         """
         Estimate model parameters with the expectation-maximization
         algorithm.
 
         Parameters
         ----------
-        X - RDD of data points
-        k - Number of components
+        data - RDD of data points
+        n_components - Number of components
         n_iter - Number of iterations. Default to 100
 
         Attributes
@@ -46,7 +46,7 @@ class GMMclustering:
         covariance_type : Type of covariance matrix.
             Supports only diagonal covariance matrix.
 
-        convergence_threshold : Threshold value to check the convergence criteria.
+        ct : Threshold value to check the convergence criteria.
             Defaults to 1e-3
 
         min_covar : Floor on the diagonal of the covariance matrix to prevent
@@ -54,17 +54,17 @@ class GMMclustering:
 
         converged : True once converged False otherwise.
 
-        Weights : array of shape (1,  k)
+        Weights : array of shape (1,  n_components)
             weights for each mixture component.
 
-        Means : array of shape (k, n_dim)
+        Means : array of shape (n_components, n_dim)
             Mean parameters for each mixture component.
 
-        Covars : array of shape (k, n_dim)
+        Covars : array of shape (n_components, n_dim)
             Covariance parameters for each mixture component
 
         """
-        sc = X.context
+        sc = data.context
         covariance_type = 'diag'
         converged = False
         self.min_covar = 1e-3
@@ -73,20 +73,20 @@ class GMMclustering:
         self.s0 = 0
         self.s1 = 0
         #  To get the no of data points
-        n_points = X.count()
+        n_points = data.count()
         #  To get the no of dimensions
-        n_dim = X.first().size
+        n_dim = data.first().size
 
         if (n_points == 0):
             raise ValueError(
                 'Dataset cannot be empty')
-        if (n_points < k):
+        if (n_points < n_components):
             raise ValueError(
                 'Not possible to make (%s) components from (%s) datapoints' %
-                (k,  n_points))
+                (n_components,  n_points))
 
         # Initialize Covars(diagonal covariance matrix)
-        if hasattr(X.first(), 'indices'):
+        if hasattr(data.first(), 'indices'):
             self.isSparse = 1
 
             def convert_to_kvPair(eachV):
@@ -102,22 +102,22 @@ class GMMclustering:
                 return x[0], sumSq - mean*mean
 
             cov = []
-            kvPair = X.flatMap(convert_to_kvPair)
+            kvPair = data.flatMap(convert_to_kvPair)
             res = kvPair.reduceByKey(np.add).map(computeVariance)
             cov = Vectors.sparse(n_dim, res.collectAsMap()).toArray() + 1e-3
-            self.Covars = np.tile(cov,  (k,  1))
+            self.Covars = np.tile(cov,  (n_components,  1))
 
         else:
             self.isSparse = 0
             cov = []
             for i in range(n_dim):
-                cov.append(X.map(lambda m: m[i]).variance()+self.min_covar)
-            self.Covars = np.tile(cov,  (k,  1))
+                cov.append(data.map(lambda m: m[i]).variance()+self.min_covar)
+            self.Covars = np.tile(cov,  (n_components,  1))
 
         # Initialize Means using MLlib KMeans
-        self.Means = np.array(KMeans().train(X, k).clusterCenters)
-        # Initialize Weights with the value 1/k for each component
-        self.Weights = np.tile(1.0 / k, k)
+        self.Means = np.array(KMeans().train(data, n_components).clusterCenters)
+        # Initialize Weights with the value 1/n_components for each component
+        self.Weights = np.tile(1.0 / n_components, n_components)
         #  EM algorithm
         # loop until number of iterations  or convergence criteria is satisfied
         for i in range(n_iter):
@@ -128,7 +128,7 @@ class GMMclustering:
             self.covarBc = sc.broadcast(self.Covars)
             self.weightBc = sc.broadcast(self.Weights)
             # Expectation Step
-            EstepOut = X.map(self.scoreOnePoint)
+            EstepOut = data.map(self.scoreOnePoint)
             # Maximization step
             MstepIn = EstepOut.reduce(lambda (w1, x1, y1, z1), (w2, x2, y2, z2):
                                       (w1+w2, x1+x2,  y1+y2,  z1+z2))
@@ -136,7 +136,7 @@ class GMMclustering:
             self.mStep(MstepIn[0], MstepIn[1], MstepIn[2], MstepIn[3])
 
             #  Check for convergence.
-            if i > 0 and abs(self.s1-self.s0) < convergence_threshold:
+            if i > 0 and abs(self.s1-self.s0) < ct:
                 converged = True
                 logging.info("Converged at iteration %s" % i)
                 break
